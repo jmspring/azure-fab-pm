@@ -1,0 +1,79 @@
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: Kafka
+metadata:
+  name: kcluster
+  namespace: kafka
+spec:
+  kafka:
+    version: 2.2.1
+    replicas: 3
+    listeners:
+      plain:
+        networkPolicyPeers:
+        - podSelector:
+            matchLabels:
+              app: schema-registry
+          namespaceSelector:
+            matchLabels:
+              app: fabrikate-kafka
+      tls:
+        authentication:
+          type: tls
+        networkPolicyPeers:
+        - namespaceSelector:
+            matchLabels:
+              app: fabrikate-kafka
+    config:
+      log.message.format.version: "2.2"
+    tlsSidecar:
+      resources:
+        requests:
+          cpu: 200m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 128Mi
+    storage:
+      type: jbod
+      volumes:
+      - id: 0
+        class: managed-premium
+        type: persistent-claim
+        size: 64Gi
+        deleteClaim: false
+  zookeeper:
+    replicas: 3
+    storage:
+      type: persistent-claim
+      class: managed-premium
+      size: 32Gi
+      deleteClaim: false
+    tlsSidecar:
+      resources:
+        requests:
+          cpu: 200m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 128Mi
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kafka
+  labels:
+    app: fabrikate-kafka
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: kafka
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
